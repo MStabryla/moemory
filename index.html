@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8"/>
+        <title>Memory</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular-route.js"></script>
+        <style>
+            .playfield{
+                margin: 0 auto;
+                max-width: 500px;
+                max-height: 300px;
+            }
+            .licznik{
+                height:30px;
+                border:1px solid black;
+                position:relative;
+                margin-bottom:30px;
+            }
+            .licznik span{
+                font-size:20px;
+                position: absolute;
+                width:100%;
+                height:100%;
+                text-align: center;
+            }
+            .licznik div{
+                background-color:#aaaaaa;
+                height:100%;
+                position:absolute;
+                border-right:1px solid black;
+            }
+            .mem{
+                width:117px;
+                height:117px;
+                display:inline-block;
+                border:1px solid black;
+                border-radius: 5px;
+                margin:3px;
+                position:relative;
+                cursor: pointer;
+            }
+            .mem img{
+                width:100%;
+                height:100%;
+                position:absolute;
+            }
+        </style>
+    </head>
+    <body>
+        <div ng-app="Main">
+            <h1>Memory - gra</h1>
+            <div class="playfield">
+                <div ng-controller="Mainx">
+                    <div ng-view>
+                        
+                    </div>
+                    <a href="#/">Test</a>
+                </div>
+            </div>
+        </div>
+        <script>
+            var ap = angular.module("Main",['ngRoute']);
+            ap.config(function($routeProvider, $locationProvider){
+                $locationProvider.hashPrefix('');
+                $routeProvider.when("/test/:time",{
+                    templateUrl:"game.html",
+                    controller: "Start"
+                })
+                .when("/",{
+                    templateUrl:"menu.html"
+                })
+            });
+            ap.controller("Mainx",function($scope,$route,$routeParams,$http){
+                $scope.men = true;
+            });
+            ap.controller("Start",function($scope,$routeParams,dateFilter,$interval,$timeout){
+                $scope.DtS = function (dat){
+                    return dat.getMinutes() * 60 + dat.getSeconds();
+                }
+                $scope.DtSt = function(dat){
+                    //return dat.getMinutes() + ":" + dat.getSeconds() + ":" + dat.getMilliseconds();
+                    return dateFilter(dat,"mm:ss.sss");
+                }
+                $scope.StD = function(sec){
+                    return new Date(0,0,0,0,0,sec,0);
+                }
+                $scope.params = $routeParams;
+                $scope.acttime = $scope.StD($scope.params.time);
+                $scope.mems = [
+                    { choisen:false, connected:false, src: "1.jpg" },
+                    { choisen:false, connected:false, src: "1.jpg" },
+                    { choisen:false, connected:false, src: "2.jpg" },
+                    { choisen:false, connected:false, src: "2.jpg" },
+                    { choisen:false, connected:false, src: "3.jpg" },
+                    { choisen:false, connected:false, src: "3.jpg" },
+                    { choisen:false, connected:false, src: "4.jpg" },
+                    { choisen:false, connected:false, src: "4.jpg" },
+                    { choisen:false, connected:false, src: "5.jpg" },
+                    { choisen:false, connected:false, src: "5.jpg" },
+                    { choisen:false, connected:false, src: "6.jpg" },
+                    { choisen:false, connected:false, src: "6.jpg" },
+                    { choisen:false, connected:false, src: "7.jpg" },
+                    { choisen:false, connected:false, src: "7.jpg" },
+                    { choisen:false, connected:false, src: "8.jpg" },
+                    { choisen:false, connected:false, src: "8.jpg" }
+                ];
+                $scope.mems = shuffle($scope.mems);
+                console.log($scope.mems);
+                var started = false;
+                var endtime;
+                $scope.start = function(dat){
+                    //console.log("start",dat.getTime());
+                    started = true;
+                    var startTime = new Date();
+                    endTime = new Date(0,0,0,0,dat.getMinutes(),dat.getSeconds(),0)
+                    var int = $interval(function(){
+                        var minus = new Date(Date.now() - startTime);
+                        
+                        //console.log(dat.getTime(),minus.getTime());
+                        var ending = new Date(0,0,0,0,0,0,0);
+                        if(dat.getTime() - minus <= ending.getTime() )
+                        {
+                            $interval.cancel(int);
+                            $scope.end();
+                            dat = new Date(0,0,0,0,0,0,0);
+                        }
+                        else if($scope.win()){
+                            $interval.cancel(int);
+                        }
+                        //console.log(minus);
+                        dat.setTime(dat - minus);
+                        if((dat.getMinutes()*60+dat.getSeconds()) <= (endTime.getMinutes()*60 + endTime.getSeconds()) * 0.2)
+                        {
+                            document.getElementById("POZ").style.backgroundColor = "#ff0000";
+                        }
+                        startTime.setTime(Date.now());
+                    },1);
+                }
+                $scope.win = function(){
+                    return $scope.mems.every(function(el){
+                        return el.connected;
+                    });
+                }
+                $scope.memch = null;
+                var lock = false;
+                $scope.click = function(elem){
+                    if(!started)
+                    {
+                        $scope.start($scope.acttime);
+                    }
+                   
+                    if(!elem.choisen && !elem.connected &&!lock)
+                    {
+                        elem.choisen = true;
+                        //console.log("przed",$scope.memch);
+                        if(!$scope.memch)
+                        {
+                            $scope.memch = elem;
+                        }
+                        else 
+                        {
+                            //console.log("prze check",$scope.memch,elem);
+                            if(check($scope.memch,elem))
+                            {
+                                $scope.memch.connected = true;
+                                elem.connected = true;
+                                if($scope.win())
+                                {
+                                    //console.log($scope.DtSt($scope.acttime));
+                                    alert("wygrałeś z czasem " + $scope.DtSt($scope.acttime));
+                                    window.location.reload();
+                                }
+                            }
+                            else
+                            {
+                                lock = true;
+                                var firstelem = $scope.memch;
+                                var secondelem = elem;
+                                //console.log("przed timeout",firstelem,secondelem);
+                                $timeout(function(){
+                                    //console.log("w timeout",firstelem,secondelem);
+                                    firstelem.choisen = false;
+                                    secondelem.choisen = false;
+                                    lock = false;
+                                },1000);
+                            }
+                            $scope.memch = null;
+                        }
+                    }
+                }
+                $scope.end = function(){
+                    alert("przegrałeś");
+                    $scope.mems = [];
+                }
+                
+                function check(elem,selem)
+                {
+                    return elem.src == selem.src;
+                }
+                
+            })
+            ap.directive("menuElem",function(){
+                return {
+                    templateUrl:"menu.html"
+                }
+            })
+            ap.directive("licznik",function($interval){
+                return {
+                    templateUrl:"time.html",
+                    scope:{
+                        time:"=time",
+                        acttime:"=acttime",
+                        DtS :"&dateToSeconds",
+                        DtSt : "&dateToString",
+                        StD : "&secondsToDate",
+                        start: "&start"
+                    }
+                }
+            })
+            ap.directive("plansza",function(){
+                return {
+                    templateUrl:"field.html",
+                    scope:{
+                        mems:"=mems",
+                        click:"&click"
+                    }
+                }
+            })
+            function DtS(dat){
+                return dat.getMinutes() * 60 + dat.getSeconds();
+            }
+            function DtSt(dat){
+                return dat.getMinutes() + ":" + dat.getSeconds() + ":" + dat.getMiliseconds();
+            }
+            function shuffle(array){
+                var indexArray = [];
+                var retArray = [];
+                while(indexArray.length != array.length)
+                {
+                    var index = Math.round(Math.random() * array.length);
+                    //console.log(index);
+                    if(indexArray.every(function(inx){
+                        return inx != index;
+                    }) && index < array.length)
+                    {
+                        indexArray.push(index);
+                        retArray.push(array[index]);
+                    }
+                }
+                return retArray;
+            }
+        </script>
+    </body>
+</html>

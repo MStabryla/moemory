@@ -1,0 +1,6 @@
+<div class="field">
+    <div class="mem" ng-repeat="mem in mems" ng-click="click({elem:mem})">
+        <img ng-src="img/{{mem.src}}" alt="err" ng-show="(mem.choisen || mem.connected)"/>
+        <img ng-src="img/b.jpg" alt="err" ng-show="(!mem.choisen && !mem.connected)" />
+    </div>
+</div>
